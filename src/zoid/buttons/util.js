@@ -1,5 +1,5 @@
 /* @flow */
-import { supportsPopups, isAndroid, isChrome, isIos, isSafari, isSFVC, type Experiment } from 'belter/src';
+import { supportsPopups, isAndroid, isChrome, isIos, isSafari, isSFVC, type Experiment, isDevice } from 'belter/src';
 import { FUNDING } from '@paypal/sdk-constants/src';
 import { getEnableFunding, createExperiment, getFundingEligibility } from '@paypal/sdk-client/src';
 
@@ -56,11 +56,15 @@ export function createVenmoExperiment() : Experiment | void {
     }
 
     if (isIos() && isSafari()) {
-        return createExperiment('enable_venmo_ios', 50);
+        return createExperiment('enable_venmo_ios', 90);
     }
 
     if (isAndroid() && isChrome()) {
-        return createExperiment('enable_venmo_android', 50);
+        return createExperiment('enable_venmo_android', 90);
+    }
+
+    if (!isDevice()) {
+        return createExperiment('enable_venmo_desktop', 0);
     }
 }
 
@@ -116,7 +120,7 @@ export function applePaySession() : ?ApplePaySessionConfigRequest {
             session.oncancel = () => {
                 listeners.cancel();
             };
-                            
+
             return {
                 addEventListener: (name, handler) => {
                     listeners[name] = handler;

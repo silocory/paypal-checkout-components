@@ -301,6 +301,27 @@ buttonConfigs.push({
 });
 
 buttonConfigs.push({
+    userAgent: IPHONE6_USER_AGENT,
+    button:    {
+        fundingSource: 'venmo'
+    },
+    fundingEligibility: {
+        venmo: {
+            eligible: true
+        }
+    },
+    wallet: {
+        venmo: {
+            instruments: [
+                {
+                    label: '@foo'
+                }
+            ]
+        }
+    }
+});
+
+buttonConfigs.push({
     diffThreshold: 1000,
     container:     {
         width: 350
@@ -864,6 +885,32 @@ buttonConfigs.push({
     },
     button: {
         fundingSource: 'card'
+    }
+});
+
+buttonConfigs.push({
+    button: {
+        style: {
+            layout:  'horizontal',
+            label:  'pay'
+        }
+    },
+    container: {
+        width: 330
+    },
+    fundingEligibility: {
+        [ FUNDING.PAYPAL ]: {
+            eligible: true
+        },
+        [ FUNDING.PAYLATER ]: {
+            eligible: true,
+            products: {
+                paylater: {
+                    eligible: true,
+                    variant:  'DE'
+                }
+            }
+        }
     }
 });
 
