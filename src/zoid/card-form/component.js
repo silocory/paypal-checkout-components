@@ -2,6 +2,7 @@
 /* @jsx jsxDom */
 /* eslint max-lines: 0 */
 
+import { LANG } from '@paypal/sdk-constants/src';
 import { ZalgoPromise } from 'zalgo-promise/src';
 import { create, type ZoidComponent } from 'zoid/src';
 import type { CrossDomainWindowType } from 'cross-domain-utils/src';
@@ -9,6 +10,7 @@ import { inlineMemoize } from 'belter/src';
 import { getLocale, getEnv, getCommit, getSDKMeta, getDisableCard, getPayPalDomain } from '@paypal/sdk-client/src';
 
 import { getSessionID } from '../../lib';
+
 
 type CardProps = {|
     client : {
@@ -26,13 +28,13 @@ type CardProps = {|
     token : string
 |};
 
-export type CardFieldsComponent = ZoidComponent<CardProps>;
+export type CardFormComponent = ZoidComponent<CardProps>;
 
-export function getCardFieldsComponent() : CardFieldsComponent {
-    return inlineMemoize(getCardFieldsComponent, () => {
+export function getCardFormComponent() : CardFormComponent {
+    return inlineMemoize(getCardFormComponent, () => {
         return create({
-            tag:  'paypal-card-fields',
-            url: () => `${ getPayPalDomain() }${ window.__CHECKOUT_URI__ || __PAYPAL_CHECKOUT__.__URI__.__CARD_FIELDS__ }`,
+            tag:  'paypal-card-form',
+            url: () => `${ getPayPalDomain() }${ __PAYPAL_CHECKOUT__.__URI__.__CARD_FIELDS__ }`,
 
             dimensions: {
                 height: '300px',
@@ -63,6 +65,7 @@ export function getCardFieldsComponent() : CardFieldsComponent {
                     type:       'function',
                     queryParam: 'token',
                     alias:      'payment',
+                    // $FlowFixMe
                     queryValue: ({ value }) => ZalgoPromise.try(value)
                 },
 
@@ -88,7 +91,8 @@ export function getCardFieldsComponent() : CardFieldsComponent {
                     queryParam:    'locale.x',
                     allowDelegate: true,
                     queryValue({ value }) : string {
-                        const { lang, country } = value;
+                        let { lang, country } = value;
+                        lang = lang === LANG.ZH_HANT ? LANG.ZH : lang;
                         return `${ lang }_${ country }`;
                     },
                     value: getLocale

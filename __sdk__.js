@@ -28,6 +28,7 @@ const SMART_FUNDING_SOURCES = [
     FUNDING.TRUSTLY,
     FUNDING.OXXO,
     FUNDING.BOLETO,
+    FUNDING.MULTIBLANCO,
     FUNDING.MAXIMA,
     FUNDING.MERCADOPAGO,
     FUNDING.CARD
@@ -44,27 +45,38 @@ const SMART_CARDS = [
 ];
 
 module.exports = {
-    buttons: {
+    'buttons': {
         entry:          './src/interface/button',
         setupHandler:   'setupButtons',
         globals,
         fundingSources: SMART_FUNDING_SOURCES,
         cards:          SMART_CARDS
     },
-    marks: {
+    'marks': {
         entry:          './src/interface/marks',
         globals,
         fundingSources: SMART_FUNDING_SOURCES,
         cards:          SMART_CARDS
     },
-    wallet: {
+    'wallet': {
         entry: './src/interface/wallet',
         globals
     },
-    fields: {
+    // @deprecated - renamed to payment-fields to be removed
+    'fields': {
         entry:          './src/interface/fields',
         globals,
         fundingSources: SMART_FUNDING_SOURCES,
         cards:          SMART_CARDS
+    },
+    'payment-fields': {
+        entry:          './src/interface/payment-fields',
+        globals,
+        fundingSources: SMART_FUNDING_SOURCES,
+        cards:          SMART_CARDS
+    },
+    'card-fields': {
+        entry:          './src/interface/card-fields',
+        globals
     }
 };

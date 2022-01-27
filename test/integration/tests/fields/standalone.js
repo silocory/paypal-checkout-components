@@ -34,7 +34,7 @@ describe(`paypal standalone fields`, () => {
             continue;
         }
 
-        it(`should render a standalone ${ fundingSource } field and call onInit`, () => {
+        it(`should render a standalone ${ fundingSource } Fields element and call onInit`, () => {
             return wrapPromise(({ expect }) => {
                 const mockEligibility = mockProp(window.__TEST_FUNDING_ELIGIBILITY__[fundingSource], 'eligible', true);
 

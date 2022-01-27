@@ -6,7 +6,8 @@ export const BUTTON_LABEL = {
     BUYNOW:      ('buynow' : 'buynow'),
     PAY:         ('pay' : 'pay'),
     INSTALLMENT: ('installment' : 'installment'),
-    SUBSCRIBE:   ('subscribe' : 'subscribe')
+    SUBSCRIBE:   ('subscribe' : 'subscribe'),
+    DONATE:      ('donate' : 'donate')
 };
 
 export const BUTTON_COLOR = {
@@ -54,4 +55,9 @@ export const BUTTON_FLOW = {
     PURCHASE:           ('purchase' : 'purchase'),
     BILLING_SETUP:      ('billing_setup' : 'billing_setup'),
     SUBSCRIPTION_SETUP: ('subscription_setup' : 'subscription_setup')
+};
+
+export const MENU_PLACEMENT = {
+    ABOVE:   ('above' : 'above'),
+    BELOW: ('below' : 'below')
 };

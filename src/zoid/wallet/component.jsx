@@ -105,6 +105,7 @@ export function getWalletComponent() : WalletComponent {
                     queryParam: 'orderID',
                     // $FlowFixMe
                     queryValue: ({ value }) => ZalgoPromise.try(value),
+                    // $FlowFixMe
                     decorate:   ({ value }) => memoize(value)
                 },
 
@@ -183,8 +184,9 @@ export function getWalletComponent() : WalletComponent {
                 remember: {
                     type:  'function',
                     value: () => {
-                        return (fundingSources : $ReadOnlyArray<$Values<typeof FUNDING>>) =>
+                        return (fundingSources : $ReadOnlyArray<$Values<typeof FUNDING>>) => {
                             rememberFunding(fundingSources, { cookie: false });
+                        };
                     }
                 },
 
@@ -246,6 +248,13 @@ export function getWalletComponent() : WalletComponent {
                     type:       'boolean',
                     value:      getDebug,
                     queryParam: true
+                },
+
+                allowBillingPayments: {
+                    type:       'boolean',
+                    queryParam: true,
+                    required:   false,
+                    default:    () => true
                 }
             }
         });

@@ -3,7 +3,7 @@
 
 import { node, type ElementNode } from 'jsx-pragmatic/src';
 
-function getComponentScript() : () => void {
+export function getComponentScript() : () => void {
 
     /* istanbul ignore next */
     return () => {
@@ -47,6 +47,7 @@ function getComponentScript() : () => void {
 
         // eslint-disable-next-line flowtype/no-mutable-array
         function toArray<T>(item) : Array<T> {
+            // $FlowFixMe[method-unbinding]
             return Array.prototype.slice.call(item);
         }
 

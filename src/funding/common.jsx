@@ -46,7 +46,28 @@ export type LabelOptions = {|
     personalization : ?Personalization,
     nonce : ?string,
     tagline : ?boolean,
-    content : ?ContentType
+    content : ?ContentType,
+    experiment? : Experiment
+|};
+
+export type DesignExperimentLabelOptions = {|
+    i : number,
+    logo : ChildType,
+    label : ?$Values<typeof BUTTON_LABEL>,
+    locale : LocaleType,
+    logoColor : $Values<typeof LOGO_COLOR>,
+    multiple : boolean,
+    period? : number,
+    fundingEligibility : FundingEligibilityType,
+    optional? : boolean,
+    onClick : (event : Event, ...args: $ReadOnlyArray<mixed>) => void,
+    onKeyPress? : (event : KeyboardEvent, ...args: $ReadOnlyArray<mixed>) => void,
+    layout : $Values<typeof BUTTON_LAYOUT>,
+    personalization : ?Personalization,
+    nonce : ?string,
+    tagline : ?boolean,
+    content : ?ContentType,
+    buttonDesignComponent : ?ChildType
 |};
 
 export type WalletLabelOptions = {|
@@ -71,15 +92,21 @@ export type FundingSourceConfig = {|
     enabled : boolean,
     automatic : boolean,
     shippingChange? : boolean,
-    requires? : Requires,
+    requires? : ({| platform? : $Values<typeof PLATFORM> |}) => Requires,
     platforms : $ReadOnlyArray<$Values<typeof PLATFORM>>,
     layouts : $ReadOnlyArray<$Values<typeof BUTTON_LAYOUT>>,
     flows : $ReadOnlyArray<$Values<typeof BUTTON_FLOW>>,
     maxCards? : { [$Values<typeof COUNTRY>] : number },
     remembered? : boolean,
     vendors? : { [$Values<typeof CARD>] : ?CardConfig },
-    eligible? : ({| components : $ReadOnlyArray<$Values<typeof COMPONENTS>>, fundingEligibility : FundingEligibilityType,
-    fundingSource : ?$Values<typeof FUNDING>, layout : ?$Values<typeof BUTTON_LAYOUT>, wallet : ?Wallet |}) => boolean,
+    eligible? : ({|
+        components : $ReadOnlyArray<$Values<typeof COMPONENTS>>,
+        experiment : ?Experiment,
+        fundingEligibility : FundingEligibilityType,
+        fundingSource : ?$Values<typeof FUNDING>,
+        layout : ?$Values<typeof BUTTON_LAYOUT>,
+        wallet : ?Wallet
+    |}) => boolean,
     Logo : (LogoOptions) => ChildType,
     Mark? : () => ChildType,
     Label : (LabelOptions) => ChildType,
@@ -100,7 +127,7 @@ export function BasicLabel({ logo, label, period, locale: { lang } } : LabelOpti
         return logo;
     }
 
-    const { Checkout, Pay, BuyNow, Installment, Subscribe } = componentContent[lang];
+    const { Checkout, Pay, BuyNow, Installment, Subscribe, Donate } = componentContent[lang];
 
     if (label === BUTTON_LABEL.CHECKOUT) {
         return <Checkout logo={ logo } />;
@@ -108,6 +135,10 @@ export function BasicLabel({ logo, label, period, locale: { lang } } : LabelOpti
 
     if (label === BUTTON_LABEL.SUBSCRIBE && Subscribe) {
         return <Subscribe logo={ logo } />;
+    }
+    
+    if (label === BUTTON_LABEL.DONATE && Donate) {
+        return <Donate logo={ logo } />;
     }
 
     if (label === BUTTON_LABEL.PAY) {

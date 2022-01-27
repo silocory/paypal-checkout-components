@@ -1,35 +1,52 @@
 /* @flow */
 /** @jsx node */
 
-import { PLATFORM } from '@paypal/sdk-constants/src';
 import { VenmoLogo, LOGO_COLOR } from '@paypal/sdk-logos/src';
+import { PLATFORM } from '@paypal/sdk-constants/src';
 
 import { BUTTON_COLOR, BUTTON_LAYOUT } from '../../constants';
 import { DEFAULT_FUNDING_CONFIG, type FundingSourceConfig } from '../common';
 
-import { WalletLabel } from './template';
+import { WalletLabel, Label, AppLabel } from './template';
 
 export function getVenmoConfig() : FundingSourceConfig {
     return {
         ...DEFAULT_FUNDING_CONFIG,
 
-        requires: {
-            popup:          true,
-            native:         true
-        },
-
         shippingChange: false,
-
-        platforms: [
-            PLATFORM.MOBILE
-        ],
 
         layouts: [
             BUTTON_LAYOUT.HORIZONTAL,
             BUTTON_LAYOUT.VERTICAL
         ],
         
+        eligible: ({ experiment }) => {
+            if (experiment && experiment.enableVenmo === false) {
+                return false;
+            }
+
+            return true;
+        },
+
+        requires: ({ platform }) => {
+            if (platform === PLATFORM.MOBILE) {
+                return {
+                    native: true,
+                    popup:  true
+                };
+            }
+
+            return {};
+        },
+
         Logo:  ({ logoColor, optional }) => VenmoLogo({ logoColor, optional }),
+        
+        Label: ({ ...props }) => {
+            if (props.experiment && props.experiment.enableVenmoAppLabel) {
+                return AppLabel(props);
+            }
+            return Label(props);
+        },
 
         WalletLabel: (...props) => WalletLabel(...props),
 

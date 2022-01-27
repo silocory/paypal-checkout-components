@@ -26,7 +26,7 @@ export function getCheckoutComponent() : CheckoutComponent {
     return inlineMemoize(getCheckoutComponent, () => {
         const component = create({
             tag: 'paypal-checkout',
-            url: () => `${ getPayPalDomain() }${ window.__CHECKOUT_URI__ || __PAYPAL_CHECKOUT__.__URI__.__CHECKOUT__ }`,
+            url: () => `${ getPayPalDomain() }${ __PAYPAL_CHECKOUT__.__URI__.__CHECKOUT__ }`,
         
             attributes: {
                 iframe: {
@@ -85,6 +85,12 @@ export function getCheckoutComponent() : CheckoutComponent {
                     required:   false
                 },
                 
+                stickinessID: {
+                    type:       'string',
+                    queryParam: true,
+                    required:   false
+                },
+                
                 env: {
                     type:       'string',
                     queryParam: true,
@@ -110,6 +116,7 @@ export function getCheckoutComponent() : CheckoutComponent {
                     required:   false,
                     // $FlowFixMe
                     queryValue: ({ value }) => ZalgoPromise.try(value),
+                    // $FlowFixMe
                     decorate:   ({ value }) => memoize(value)
                 },
 
@@ -225,9 +232,15 @@ export function getCheckoutComponent() : CheckoutComponent {
                 }
             },
         
-            dimensions: isDevice()
-                ? { width:  '100%', height: `${ DEFAULT_POPUP_SIZE.HEIGHT }px` }
-                : { width:  `${ DEFAULT_POPUP_SIZE.WIDTH }px`, height: `${ DEFAULT_POPUP_SIZE.HEIGHT }px` }
+            dimensions: ({ props }) => {
+                if (typeof props.dimensions === 'object') {
+                    return { width: `${ props.dimensions.width }px`, height: `${ props.dimensions.height }px` };
+                } else {
+                    return isDevice()
+                        ? { width:  '100%', height: `${ DEFAULT_POPUP_SIZE.HEIGHT }px` }
+                        : { width:  `${ DEFAULT_POPUP_SIZE.WIDTH }px`, height: `${ DEFAULT_POPUP_SIZE.HEIGHT }px` };
+                }
+            }
         });
         
         if (component.isChild()) {

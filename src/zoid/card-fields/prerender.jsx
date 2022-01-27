@@ -3,11 +3,14 @@
 
 import { node, type ChildType } from 'jsx-pragmatic/src';
 
-type PrerenderedFieldsProps = {|
-    nonce : ?string
+type PrerenderedCardProps = {|
+    nonce : ?string,
+    height : ?number
 |};
 
-export function FieldsPrerender({ nonce } : PrerenderedFieldsProps) : ChildType {
+const DEFAULT_HEIGHT = 30;
+
+export function CardPrerender({ nonce, height } : PrerenderedCardProps) : ChildType {
     return (
         <html>
             <body>
@@ -25,30 +28,32 @@ export function FieldsPrerender({ nonce } : PrerenderedFieldsProps) : ChildType 
                             background: #e9ebee;
                             position: relative;
                             overflow: hidden;
+                            height: ${ height ?? DEFAULT_HEIGHT };
                         }
 
                         body::after {
                             content: "";
                             display: block;
-                            background-color: #efefef;
-                            border-radius: 8px;
-                            overflow: hidden;
+                            background-color: #fff;
                             position: absolute;
                             top: 0;
                             bottom: 0;
                             width: 100%;
-                            height: 100%;
+                            height: ${ height ?? DEFAULT_HEIGHT };
                             transform: translateX(0);
-                            box-shadow: 0px 0px 107px 60px #efefef;
+                            box-shadow: 0px 0px 107px 60px #dddfe2;
                             animation: 1.5s loading-placeholder ease-in-out infinite;
                         }
 
                         @keyframes loading-placeholder {
                             0% {
-                                transform: translateX(-150%);
+                                opacity: 0.1;
+                            }
+                            50% {
+                                opacity: 1;
                             }
                             100% {
-                                transform: translateX(150%);
+                                opacity: 0.1;
                             }
                         }
                     ` }

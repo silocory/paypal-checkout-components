@@ -1,13 +1,21 @@
 /* @flow */
-import { supportsPopups, isAndroid, isChrome, isIos, isSafari, isSFVC, type Experiment, isDevice } from 'belter/src';
-import { FUNDING } from '@paypal/sdk-constants/src';
-import { getEnableFunding, createExperiment, getFundingEligibility } from '@paypal/sdk-client/src';
+import { supportsPopups as userAgentSupportsPopups, isAndroid, isChrome, isIos, isSafari, isSFVC, type Experiment, isDevice, isTablet, getElement } from 'belter/src';
+import { ENV, FUNDING } from '@paypal/sdk-constants/src';
+import { getEnableFunding, getDisableFunding, createExperiment, getFundingEligibility, getPlatform, getComponents, getEnv } from '@paypal/sdk-client/src';
+import { getRefinedFundingEligibility } from '@paypal/funding-components/src';
 
-import type { Experiment as VenmoExperiment } from '../../types';
-import { BUTTON_FLOW } from '../../constants';
-import type { ApplePaySessionConfigRequest, ButtonProps } from '../../ui/buttons/props';
+import type { Experiment as EligibilityExperiment } from '../../types';
+import { BUTTON_FLOW, BUTTON_SIZE, BUTTON_LAYOUT } from '../../constants';
+import type { ApplePaySessionConfigRequest, CreateBillingAgreement, CreateSubscription, ButtonProps } from '../../ui/buttons/props';
+import { determineEligibleFunding } from '../../funding';
+import { BUTTON_SIZE_STYLE } from '../../ui/buttons/config';
 
-export function determineFlow(props : ButtonProps) : $Values<typeof BUTTON_FLOW> {
+type DetermineFlowOptions = {|
+    createBillingAgreement : CreateBillingAgreement,
+    createSubscription : CreateSubscription
+|};
+
+export function determineFlow(props : DetermineFlowOptions) : $Values<typeof BUTTON_FLOW> {
 
     if (props.createBillingAgreement) {
         return BUTTON_FLOW.BILLING_SETUP;
@@ -23,11 +31,15 @@ export function isSupportedNativeBrowser() : boolean {
         return false;
     }
 
-    if (!supportsPopups()) {
+    if (!userAgentSupportsPopups()) {
         return false;
     }
 
     if (isSFVC()) {
+        return false;
+    }
+
+    if (isTablet()) {
         return false;
     }
 
@@ -42,40 +54,109 @@ export function isSupportedNativeBrowser() : boolean {
     return false;
 }
 
-export function createVenmoExperiment() : Experiment | void {
+export function createVenmoExperiment() : ?Experiment {
     const enableFunding = getEnableFunding();
     const isEnableFundingVenmo = enableFunding && enableFunding.indexOf(FUNDING.VENMO) !== -1;
 
     const fundingEligibility = getFundingEligibility();
-    const isEligibleForVenmo = fundingEligibility && fundingEligibility[FUNDING.VENMO] && fundingEligibility[FUNDING.VENMO].eligible;
+    const hasBasicVenmoEligibility = fundingEligibility && fundingEligibility[FUNDING.VENMO] && fundingEligibility[FUNDING.VENMO].eligible;
+    const isEligibleForVenmoNative = isSupportedNativeBrowser() && !isEnableFundingVenmo;
 
-    // exclude buyers who are not eligible
-    // exclude integrations using enable-funding=venmo
-    if (!isEligibleForVenmo || isEnableFundingVenmo) {
+    // basic eligibility must be true for venmo to be eligible for the experiments
+    if (!hasBasicVenmoEligibility) {
         return;
     }
 
-    if (isIos() && isSafari()) {
-        return createExperiment('enable_venmo_ios', 90);
-    }
+    if (isDevice()) {
+        if (!isEligibleForVenmoNative) {
+            return;
+        }
 
-    if (isAndroid() && isChrome()) {
-        return createExperiment('enable_venmo_android', 90);
-    }
+        if (isIos() && isSafari()) {
+            return createExperiment('enable_venmo_ios', 90);
+        }
 
-    if (!isDevice()) {
-        return createExperiment('enable_venmo_desktop', 0);
+        if (isAndroid() && isChrome()) {
+            return createExperiment('enable_venmo_android', 90);
+        }
+    } else {
+        return createExperiment('enable_venmo_desktop', 90);
     }
 }
 
-export function getVenmoExperiment(experiment : ?Experiment) : VenmoExperiment {
+export function getVenmoExperiment() : EligibilityExperiment {
+    const experiment = createVenmoExperiment();
+
     const enableFunding = getEnableFunding();
-    const isEnableFundingVenmo = enableFunding && enableFunding.indexOf(FUNDING.VENMO) !== -1;
+    const isVenmoFundingEnabled = enableFunding && enableFunding.indexOf(FUNDING.VENMO) !== -1;
+    const isNativeSupported = isSupportedNativeBrowser();
     const isExperimentEnabled = experiment && experiment.isEnabled();
 
+    if (isDevice()) {
+        return {
+            enableVenmo: Boolean((isExperimentEnabled || isVenmoFundingEnabled) && isNativeSupported)
+        };
+    } else {
+        return {
+            enableVenmo: Boolean(isExperimentEnabled)
+        };
+    }
+}
+
+export function createNoPaylaterExperiment(fundingSource : ?$Values<typeof FUNDING>) : Experiment | void {
+    const disableFunding = getDisableFunding();
+    const isDisableFundingPaylater = disableFunding && disableFunding.indexOf(FUNDING.PAYLATER) !== -1;
+    const enableFunding = getEnableFunding();
+    const isEnableFundingPaylater = enableFunding && enableFunding.indexOf(FUNDING.PAYLATER) !== -1;
+
+    const { paylater } = getFundingEligibility();
+    const isEligibleForPaylater = paylater?.eligible;
+    const isExperimentable = paylater?.products?.paylater?.variant === 'experimentable' || paylater?.products?.payIn4?.variant === 'experimentable';
+    // No experiment because ineligible, already forced on or off
+    if (!isEligibleForPaylater
+        || !isExperimentable
+        || isDisableFundingPaylater
+        || isEnableFundingPaylater
+        || fundingSource
+    ) {
+        return;
+    }
+
+    return createExperiment('disable_paylater', 0);
+}
+
+export function getNoPaylaterExperiment(fundingSource : ?$Values<typeof FUNDING>) : EligibilityExperiment {
+    const experiment = createNoPaylaterExperiment(fundingSource);
+
+    const disableFunding = getDisableFunding();
+    const isDisableFundingPaylater = disableFunding && disableFunding.indexOf(FUNDING.PAYLATER) !== -1;
+    const isExperimentEnabled = experiment && experiment.isEnabled();
     return {
-        enableVenmo: Boolean(isExperimentEnabled || isEnableFundingVenmo)
+        disablePaylater: Boolean((isExperimentEnabled || isDisableFundingPaylater))
     };
+}
+
+export function getVenmoAppLabelExperiment() : EligibilityExperiment  {
+    const isEnvForTest = getEnv() === ENV.LOCAL || getEnv() === ENV.TEST || getEnv() === ENV.STAGE;
+    const isEnabledForTest = isEnvForTest ? window.localStorage.getItem('enable_venmo_app_label') : false;
+    return {
+        enableVenmoAppLabel: isEnabledForTest
+    };
+}
+
+export function getRenderedButtons(props : ButtonProps) : $ReadOnlyArray<$Values<typeof FUNDING>> {
+    const { fundingSource, onShippingChange, style = {}, fundingEligibility = getRefinedFundingEligibility(),
+        experiment = getVenmoExperiment(), applePaySupport, supportsPopups = userAgentSupportsPopups(),
+        supportedNativeBrowser = isSupportedNativeBrowser(), createBillingAgreement, createSubscription } = props;
+
+    const flow               = determineFlow({ createBillingAgreement, createSubscription });
+    const { layout }         = style;
+    const remembered         = [];
+    const platform           = getPlatform();
+    const components         = getComponents();
+
+    const renderedButtons = determineEligibleFunding({ fundingSource, remembered, layout, platform, fundingEligibility, components, onShippingChange, flow, applePaySupport, supportsPopups, supportedNativeBrowser, experiment });
+    return renderedButtons;
 }
 
 export function applePaySession() : ?ApplePaySessionConfigRequest {
@@ -117,6 +198,7 @@ export function applePaySession() : ?ApplePaySessionConfigRequest {
                 listeners.paymentauthorized({ payment });
             };
 
+            // eslint-disable-next-line unicorn/prefer-add-event-listener
             session.oncancel = () => {
                 listeners.cancel();
             };
@@ -147,5 +229,66 @@ export function applePaySession() : ?ApplePaySessionConfigRequest {
         };
     } catch (e) {
         return undefined;
+    }
+}
+
+export function getButtonExperiments (fundingSource : ?$Values<typeof FUNDING>) : EligibilityExperiment {
+    return {
+        ...getVenmoExperiment(),
+        ...getNoPaylaterExperiment(fundingSource),
+        ...getVenmoAppLabelExperiment()
+    };
+}
+
+export function getButtonSize (props : ButtonProps, container : string | HTMLElement | void) : string | void {
+    if (!container) {
+        return;
+    }
+
+    let containerWidth = 0;
+
+    if (typeof container === 'string') {
+        const containerElement = document.querySelector(container);
+        containerWidth = containerElement?.offsetWidth || 0;
+    } else {
+        containerWidth = getElement(container)?.offsetWidth;
+    }
+
+    const layout = props?.style?.layout || BUTTON_LAYOUT.HORIZONTAL;
+    const numButtonsRendered = props?.renderedButtons?.length || 1;
+    const {
+        tiny,
+        small,
+        medium,
+        large,
+        huge
+    } = BUTTON_SIZE_STYLE;
+
+    if (containerWidth) {
+        let buttonWidth = Math.min(containerWidth, 750);
+        const spaceBetweenHorizontalButtons = 8;
+        if (layout === BUTTON_LAYOUT.HORIZONTAL && numButtonsRendered === 2) {
+            buttonWidth = (buttonWidth - spaceBetweenHorizontalButtons) / 2;
+        }
+
+        if (tiny.minWidth <= buttonWidth && buttonWidth <= tiny.maxWidth) {
+            return BUTTON_SIZE.TINY;
+        }
+
+        if (small.minWidth < buttonWidth && buttonWidth <= small.maxWidth) {
+            return BUTTON_SIZE.SMALL;
+        }
+
+        if (medium.minWidth < buttonWidth && buttonWidth <= medium.maxWidth) {
+            return BUTTON_SIZE.MEDIUM;
+        }
+
+        if (large.minWidth < buttonWidth && buttonWidth <= large.maxWidth) {
+            return BUTTON_SIZE.LARGE;
+        }
+
+        if (huge.minWidth < buttonWidth) {
+            return BUTTON_SIZE.HUGE;
+        }
     }
 }

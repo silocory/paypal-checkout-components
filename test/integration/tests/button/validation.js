@@ -79,8 +79,14 @@ const buttonConfigs = [
                 label: `gnorf`,
                 valid: false
             },
+
             {
                 label: `subscribe`,
+                valid: true
+            },
+
+            {
+                label: `donate`,
                 valid: true
             }
 
@@ -503,6 +509,48 @@ const buttonConfigs = [
                 label: `subscribe`,
                 color: `blerf`,
                 valid: false
+            },
+
+            {
+                label: `donate`,
+                color: `gold`,
+                valid: true
+            },
+
+            {
+                label: `donate`,
+                color: `blue`,
+                valid: true
+            },
+
+            {
+                label: `donate`,
+                color: `silver`,
+                valid: true
+            },
+
+            {
+                label: `donate`,
+                color: `black`,
+                valid: true
+            },
+
+            {
+                label: `donate`,
+                color: `creditblue`,
+                valid: false
+            },
+
+            {
+                label: `donate`,
+                color: `darkblue`,
+                valid: false
+            },
+
+            {
+                label: `donate`,
+                color: `blerf`,
+                valid: false
             }
 
         // $FlowFixMe
@@ -667,6 +715,13 @@ const buttonConfigs = [
 
             {
                 layout: `vertical`,
+                label:  `multiblanco`,
+                commit: true,
+                valid:  false
+            },
+
+            {
+                layout: `vertical`,
                 label:  `maxima`,
                 commit: true,
                 valid:  false
@@ -748,6 +803,12 @@ const buttonConfigs = [
 
             {
                 tagline: false,
+                layout:  'horizontal',
+                valid:   true
+            },
+
+            {
+                tagline: 'false',
                 layout:  'horizontal',
                 valid:   true
             },

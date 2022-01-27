@@ -1,9 +1,11 @@
 /* @flow */
 
-import { ENV } from '@paypal/sdk-constants/src';
+import { ENV, FUNDING } from '@paypal/sdk-constants/src';
 import { LOGO_CLASS } from '@paypal/sdk-logos/src';
 
-import { CLASS } from '../../../constants';
+import { CLASS, ATTRIBUTE } from '../../../constants';
+
+const MIN_VAULT_BUTTON_WIDTH = 250;
 
 export const buttonStyle = `
 
@@ -75,7 +77,7 @@ export const buttonStyle = `
         height: 100%;
         text-align: left;
     }
-    
+
     .${ CLASS.TAGLINE } {
         max-width: 100%;
         font-size: initial;
@@ -122,5 +124,21 @@ export const buttonStyle = `
 
     .${ CLASS.CONTAINER } .${ CLASS.VAULT_HEADER } {
         margin-top: 10px;
+    }
+
+    .${ CLASS.BUTTON }[${ ATTRIBUTE.FUNDING_SOURCE }=${ FUNDING.VENMO }] .${ CLASS.BUTTON_LABEL } .${ CLASS.TEXT } {
+        font-size: 18px;
+        font-weight: 500;
+    }
+
+    @media only screen and (max-width: ${ MIN_VAULT_BUTTON_WIDTH }px) {
+        .menu-button {
+            display: none;
+        }
+        .${ CLASS.CONTAINER } .${ CLASS.BUTTON_ROW }.${ CLASS.WALLET }.${ CLASS.WALLET_MENU } .${ CLASS.BUTTON }  {
+            border-top-right-radius: 4px;
+            border-bottom-right-radius: 4px;
+            width: 100%;
+        }
     }
 `;

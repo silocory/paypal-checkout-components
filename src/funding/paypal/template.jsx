@@ -5,7 +5,14 @@ import { node, Fragment, Style, type ChildType } from 'jsx-pragmatic/src';
 import { PPLogo, PayPalLogo, CreditLogo, CreditMark, PayPalMark, GlyphCard, GlyphBank, LOGO_CLASS } from '@paypal/sdk-logos/src';
 import { FUNDING, WALLET_INSTRUMENT } from '@paypal/sdk-constants/src';
 
-import { type LogoOptions, type LabelOptions, type WalletLabelOptions, type TagOptions, BasicLabel } from '../common';
+import {
+    type LogoOptions,
+    type LabelOptions,
+    type DesignExperimentLabelOptions,
+    type WalletLabelOptions,
+    type TagOptions,
+    BasicLabel
+} from '../common';
 import { CLASS, ATTRIBUTE, BUTTON_LAYOUT } from '../../constants';
 import { componentContent } from '../content';
 import { Text, Space, PlaceHolder } from '../../ui/text';
@@ -52,7 +59,7 @@ function getButtonPersonalizationStyle(opts : LabelOptions) : ?ChildType {
     if (__TEST__) {
         return null;
     }
-    
+
     const { tagline } = opts;
 
     const personalizationText = !tagline && getPersonalizationText(opts);
@@ -119,7 +126,7 @@ function ButtonPersonalization(opts : LabelOptions) : ?ChildType {
     }
 
     const { nonce, tagline, label } = opts;
-    
+
     if (tagline || !label) {
         return;
     }
@@ -142,7 +149,7 @@ function ButtonPersonalization(opts : LabelOptions) : ?ChildType {
                 getButtonPersonalizationStyle(opts)
             }
         </Fragment>
-        
+
     );
 }
 
@@ -152,6 +159,19 @@ export function Label(opts : LabelOptions) : ChildType {
         <Fragment>
             <BasicLabel { ...opts } />
             <ButtonPersonalization { ...opts } />
+        </Fragment>
+    );
+}
+
+export function DesignExperimentLabel(opts : DesignExperimentLabelOptions) : ChildType {
+    const { buttonDesignComponent, ...updatedOpts } = opts;
+    const basicLabel = (<BasicLabel { ...updatedOpts } />);
+    const buttonPersonalization = (<ButtonPersonalization { ...updatedOpts } />);
+    return (
+        <Fragment>
+            { basicLabel }
+            { buttonDesignComponent }
+            { buttonPersonalization }
         </Fragment>
     );
 }
@@ -254,12 +274,12 @@ export function WalletLabel(opts : WalletLabelOptions) : ?ChildType {
             logo = <CreditMark />;
 
             label = content && content.credit;
-        
+
         } else if (instrument.type === WALLET_INSTRUMENT.BALANCE) {
             logo = <PayPalMark />;
 
             label = content && content.balance;
-        
+
         } else if (instrument.label) {
             label = instrument.label;
         }
@@ -319,7 +339,7 @@ export function Tag({ multiple, locale: { lang } } : TagOptions) : ?ChildType {
     if (__WEB__) {
         return null;
     }
-    
+
     const { DualTag, SaferTag } = componentContent[lang];
 
     return (multiple && DualTag)

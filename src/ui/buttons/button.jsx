@@ -10,7 +10,9 @@ import { noop, preventClickFocus, isBrowser, isElement } from 'belter/src';
 import type { ContentType, Wallet, Experiment, WalletInstrument } from '../../types';
 import { ATTRIBUTE, CLASS, BUTTON_COLOR, BUTTON_NUMBER, TEXT_COLOR, BUTTON_FLOW } from '../../constants';
 import { getFundingConfig } from '../../funding';
+import { DesignExperimentLabel } from '../../funding/paypal/template';
 
+import { getButtonDesign } from './buttonDesigns';
 import type { ButtonStyle, Personalization, OnShippingChange } from './props';
 import { Spinner } from './spinner';
 import { MenuButton } from './menu-button';
@@ -127,8 +129,42 @@ export function Button({ fundingSource, style, multiple, locale, env, fundingEli
             personalization={ personalization }
             tagline={ tagline }
             content={ content }
+            experiment={ experiment }
         />
     );
+
+    // Only apply animation to the paypal button
+    const buttonDesign = fundingSource === FUNDING.PAYPAL
+        ? getButtonDesign(personalization)
+        : {};
+
+    const {
+        buttonDesignContainerClass = '',
+        buttonDesignComponent = null
+    } = buttonDesign;
+
+    if (buttonDesignComponent) {
+        labelNode = (
+            <DesignExperimentLabel
+                i={ i }
+                logo={ logoNode }
+                label={ label }
+                nonce={ nonce }
+                locale={ locale }
+                logoColor={ logoColor }
+                period={ period }
+                layout={ layout }
+                multiple={ multiple }
+                fundingEligibility={ fundingEligibility }
+                onClick={ clickHandler }
+                onKeyPress={ keypressHandler }
+                personalization={ personalization }
+                tagline={ tagline }
+                content={ content }
+                buttonDesignComponent={ buttonDesignComponent }
+            />
+        );
+    }
 
     let isWallet = false;
 
@@ -170,7 +206,8 @@ export function Button({ fundingSource, style, multiple, locale, env, fundingEli
                 `${ CLASS.TEXT_COLOR }-${ textColor }`,
                 `${ LOGO_CLASS.LOGO_COLOR }-${ logoColor }`,
                 `${ isWallet ? CLASS.WALLET : '' }`,
-                `${ shouldShowWalletMenu ? CLASS.WALLET_MENU : '' }`
+                `${ shouldShowWalletMenu ? CLASS.WALLET_MENU : '' }`,
+                `${ buttonDesignContainerClass }`
             ].join(' ') }
         >
             <div

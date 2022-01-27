@@ -10,6 +10,8 @@ import { CLASS, BUTTON_NUMBER, BUTTON_LAYOUT, BUTTON_FLOW } from '../../constant
 import { determineEligibleFunding, isWalletFundingEligible } from '../../funding';
 import { ValidationError } from '../../lib';
 
+import { getButtonDesign } from './buttonDesigns';
+import { ButtonDesignExperimentScriptWrapper } from './buttonDesigns/script';
 import { normalizeButtonProps, type ButtonPropsInputs, type OnShippingChange } from './props';
 import { Style } from './style';
 import { Button } from './button';
@@ -28,7 +30,7 @@ function getWalletInstrument({ wallet, fundingSource, onShippingChange } : GetWa
         return;
     }
 
-    const walletFunding = wallet && wallet && wallet[fundingSource.toString()];
+    const walletFunding = wallet && wallet[fundingSource.toString()];
     const instruments = walletFunding && walletFunding.instruments;
 
     if (!instruments || !instruments.length) {
@@ -81,6 +83,7 @@ function getWalletInstruments({ wallet, layout, fundingSources, onShippingChange
         }
     }
 
+    // $FlowFixMe[incompatible-return]
     return instruments;
 }
 
@@ -107,15 +110,17 @@ export function Buttons(props : ButtonsProps) : ElementNode {
     }
 
     if (fundingSources.indexOf(FUNDING.CARD) !== -1) {
-        fundingSources = fundingSources.filter(src => src !== FUNDING.CARD).concat([ FUNDING.CARD ]);
+        fundingSources = [ ...fundingSources.filter(src => src !== FUNDING.CARD),  FUNDING.CARD ];
     }
 
     const instruments = getWalletInstruments({ wallet, fundingSources, layout, onShippingChange });
 
     const isWallet = (
-        flow === BUTTON_FLOW.PURCHASE,
+        flow === BUTTON_FLOW.PURCHASE &&
         ((__WEB__ && userIDToken) || Object.keys(instruments).length)
     );
+
+    const { buttonDesignScript = '' } = getButtonDesign(personalization);
 
     return (
         <div class={ [
@@ -130,6 +135,7 @@ export function Buttons(props : ButtonsProps) : ElementNode {
             <Style
                 nonce={ nonce }
                 style={ style }
+                fundingEligibility={ fundingEligibility }
             />
 
             {
@@ -163,12 +169,12 @@ export function Buttons(props : ButtonsProps) : ElementNode {
             {
                 (tagline && layout === BUTTON_LAYOUT.HORIZONTAL && !fundingSource)
                     ? <TagLine
-                        fundingSource={ fundingSources[0] }
-                        style={ style }
-                        locale={ locale }
-                        multiple={ multiple }
-                        nonce={ nonce }
-                        personalization={ personalization }
+                            fundingSource={ fundingSources[0] }
+                            style={ style }
+                            locale={ locale }
+                            multiple={ multiple }
+                            nonce={ nonce }
+                            personalization={ personalization }
                     /> : null
             }
 
@@ -181,14 +187,21 @@ export function Buttons(props : ButtonsProps) : ElementNode {
             {
                 (layout === BUTTON_LAYOUT.VERTICAL && fundingSources.indexOf(FUNDING.CARD) !== -1)
                     ? <PoweredByPayPal
-                        locale={ locale }
-                        nonce={ nonce }
+                            locale={ locale }
+                            nonce={ nonce }
                     /> : null
             }
 
-            <Script
-                nonce={ nonce }
-            />
+            {
+                buttonDesignScript
+                    ? <ButtonDesignExperimentScriptWrapper
+                            nonce={ nonce }
+                            buttonDesignScript={ buttonDesignScript }
+                    />
+                    : <Script
+                            nonce={ nonce }
+                    />
+            }
         </div>
     );
 }

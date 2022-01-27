@@ -19,17 +19,16 @@ import { isFundingEligible } from '../../funding';
 
 import { containerTemplate } from './container';
 import { PrerenderedButtons } from './prerender';
-import { applePaySession, determineFlow, isSupportedNativeBrowser, createVenmoExperiment, getVenmoExperiment } from './util';
+import { applePaySession, determineFlow, isSupportedNativeBrowser, createVenmoExperiment,
+    createNoPaylaterExperiment, getRenderedButtons, getButtonSize, getButtonExperiments } from './util';
 
 export type ButtonsComponent = ZoidComponent<ButtonProps>;
 
 export const getButtonsComponent : () => ButtonsComponent = memoize(() => {
-    const enableVenmoExperiment = createVenmoExperiment();
-
     const queriedEligibleFunding = [];
     return create({
         tag:  'paypal-buttons',
-        url: () => `${ getPayPalDomain() }${ window.__CHECKOUT_URI__ || __PAYPAL_CHECKOUT__.__URI__.__BUTTONS__ }`,
+        url: () => `${ getPayPalDomain() }${ __PAYPAL_CHECKOUT__.__URI__.__BUTTONS__ }`,
 
         domain: getPayPalDomainRegex(),
 
@@ -70,10 +69,11 @@ export const getButtonsComponent : () => ButtonsComponent = memoize(() => {
                 fundingEligibility = getRefinedFundingEligibility(),
                 supportsPopups = userAgentSupportsPopups(),
                 supportedNativeBrowser = isSupportedNativeBrowser(),
-                experiment = getVenmoExperiment(enableVenmoExperiment)
+                experiment = getButtonExperiments(fundingSource),
+                createBillingAgreement, createSubscription
             } = props;
 
-            const flow = determineFlow(props);
+            const flow = determineFlow({ createBillingAgreement, createSubscription });
             const applePaySupport = fundingEligibility?.applepay?.eligible ? isApplePaySupported() : false;
 
             if (!fundingSource) {
@@ -110,9 +110,10 @@ export const getButtonsComponent : () => ButtonsComponent = memoize(() => {
                 required:   false,
 
                 validate: ({ props }) => {
-                    const { fundingSource, onShippingChange, style = {}, fundingEligibility = getRefinedFundingEligibility(), applePaySupport, supportsPopups, supportedNativeBrowser } = props;
+                    const { fundingSource, onShippingChange, style = {}, fundingEligibility = getRefinedFundingEligibility(),
+                        applePaySupport, supportsPopups, supportedNativeBrowser, createBillingAgreement, createSubscription } = props;
 
-                    const flow = determineFlow(props);
+                    const flow = determineFlow({ createBillingAgreement, createSubscription });
                     const { layout } = style;
 
                     const platform           = getPlatform();
@@ -228,7 +229,8 @@ export const getButtonsComponent : () => ButtonsComponent = memoize(() => {
                             start:     (url) => {
                                 return new ZalgoPromise((resolve, reject) => {
                                     window.popupBridge.onComplete = (err, result) => {
-                                        return err ? reject(err) : resolve(result.queryItems);
+                                        const queryItems = result && result.queryItems ? result.queryItems : {};
+                                        return err ? reject(err) : resolve(queryItems);
                                     };
                                     window.popupBridge.open(url);
                                 });
@@ -244,8 +246,21 @@ export const getButtonsComponent : () => ButtonsComponent = memoize(() => {
                 default:  () => noop,
                 decorate: ({ props, value = noop }) => {
                     return (...args) => {
-                        if (enableVenmoExperiment) {
-                            enableVenmoExperiment.logStart({ [ FPTI_KEY.BUTTON_SESSION_UID ]: props.buttonSessionID });
+                        const { fundingSource } = props;
+                        const venmoExperiment = createVenmoExperiment();
+
+                        if (venmoExperiment) {
+                            venmoExperiment.logStart({ [ FPTI_KEY.BUTTON_SESSION_UID ]: props.buttonSessionID });
+                        }
+
+                        const enableNoPaylaterExperiment = createNoPaylaterExperiment(fundingSource);
+
+                        if (enableNoPaylaterExperiment) {
+                            enableNoPaylaterExperiment.logStart({
+                                [ FPTI_KEY.BUTTON_SESSION_UID ]: props.buttonSessionID,
+                                [ FPTI_KEY.CONTEXT_ID ]:         props.buttonSessionID,
+                                [ FPTI_KEY.CONTEXT_TYPE ]:       'button_session_id'
+                            });
                         }
 
                         return value(...args);
@@ -334,6 +349,15 @@ export const getButtonsComponent : () => ButtonsComponent = memoize(() => {
                 required:   false
             },
 
+            buttonSize: {
+                type:       'string',
+                required:   false,
+                value:      ({ props, container }) => {
+                    return getButtonSize(props, container);
+                },
+                queryParam: true
+            },
+
             apiStageHost: {
                 type:       'string',
                 value:      getAPIStageHost,
@@ -363,13 +387,20 @@ export const getButtonsComponent : () => ButtonsComponent = memoize(() => {
             experiment: {
                 type:       'object',
                 queryParam: true,
-                value:      () => getVenmoExperiment(enableVenmoExperiment)
+                value:      ({ props }) => {
+                    const { fundingSource } = props;
+                    const experiments = getButtonExperiments(fundingSource);
+                    return experiments;
+                }
             },
 
             flow: {
                 type:       'string',
                 queryParam: true,
-                value:      ({ props }) => determineFlow(props)
+                value:      ({ props }) => {
+                    const { createBillingAgreement, createSubscription } = props;
+                    return determineFlow({ createBillingAgreement, createSubscription });
+                }
             },
 
             remember: {
@@ -435,6 +466,12 @@ export const getButtonsComponent : () => ButtonsComponent = memoize(() => {
                 value:      getMerchantID
             },
 
+            renderedButtons: {
+                type:       'array',
+                queryParam: true,
+                value:      ({ props }) => getRenderedButtons(props)
+            },
+
             csp: {
                 type:     'object',
                 required: false,
@@ -461,7 +498,8 @@ export const getButtonsComponent : () => ButtonsComponent = memoize(() => {
                 type:       'string',
                 default:    getUserIDToken,
                 required:   false,
-                queryParam: true
+                queryParam: (getEnv() !== ENV.LOCAL && getEnv() !== ENV.STAGE),
+                bodyParam:  (getEnv() === ENV.LOCAL || getEnv() === ENV.STAGE)
             },
 
             clientMetadataID: {
@@ -493,6 +531,12 @@ export const getButtonsComponent : () => ButtonsComponent = memoize(() => {
             },
 
             paymentMethodNonce: {
+                type:       'string',
+                queryParam: true,
+                required:   false
+            },
+
+            paymentMethodToken: {
                 type:       'string',
                 queryParam: true,
                 required:   false
@@ -534,6 +578,15 @@ export const getButtonsComponent : () => ButtonsComponent = memoize(() => {
                 type:       'function',
                 required:   false,
                 value:      applePaySession
+            },
+
+            // allowBillingPayments prop is used by Honey Extension to render the one-click button
+            // with payment methods & to use the payment methods instead of the Billing Agreement
+            allowBillingPayments: {
+                type:       'boolean',
+                queryParam: true,
+                required:   false,
+                default:    () => true
             }
         }
     });
